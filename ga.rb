@@ -7,34 +7,38 @@ require_relative 'pool'
 
 class Ga
   
+  #Number of children in our 'breeding program' for current generation
   LOCAL_CHILDREN = 15
-  CROSSOVER_DEFAULT = 1
 
-  MUTATION_DEFAULT = 1
-
-  DEFAULT_KEEP_PERCENT = 0.4
-
-
-  attr_reader :max_it, :slope_percent, :random_order_percent, :keep_percent, 
-              :mutation_prob, :mute_prop, :smart_start
-  attr_accessor :p, :simulation_begun, :crossovers, :mutations
+  attr_accessor :p, :simulation_begun, :crossovers, :mutations, :intervals, :max_it, :smart_start
 
   def initialize
-    @crossovers=CROSSOVER_DEFAULT
-    @mutations=MUTATION_DEFAULT
     @simulation_began = false    
   end
 
-  def set_parameters(max_it,population_size,slope_percent,random_order_percent,
-                    mutation_prob,mute_prop,smart_start)
-    @max_it = max_it
-    @p = Pool.new(population_size)
+  def set_parameters(endpoint_x, endpoint_y, iterations, population_size, intervals,
+                     slope_percent, random_order_percent, 
+                     keep_percent, 
+                     num_crossovers,
+                     num_mutations, mutation_prob, mute_prop,
+                     smart_start)
     
+    @endpoint_x = endpoint_x
+    @endpoint_y = endpoint_y
+
+    @max_it = iterations
+    @p = Pool.new(population_size, intervals,num_mutations, num_crossovers, @endpoint_x, @endpoint_y)
+    
+    @intervals = intervals
+
     @slope_percent = slope_percent
     @random_order_percent = random_order_percent
     
-    @keep_percent = DEFAULT_KEEP_PERCENT > 0.5 ? 0.5 : DEFAULT_KEEP_PERCENT
+    @keep_percent = keep_percent > 0.5 ? 0.5 : keep_percent
 
+    @num_crossovers = num_crossovers
+
+    @num_mutations = num_mutations
     @mutation_prob = mutation_prob
     
     @mute_prop = mute_prop
@@ -52,14 +56,14 @@ class Ga
     return ga
   end
 
-  def run_simulation(simulation_iterations)
+  def run_simulation
     #initalise random
     srand(Time.new.usec)
 
     #@p.create_initial_population
 
     #only allow run_simulation_smart for 70 iterations
-    if @smart_start && simulation_iterations > 70 && Individual.current_intervals > 10
+    if @smart_start && @max_it > 70 && @intervals > 10
       GeneticAlgorithm::run_simulation_smart(self)
     else
       GeneticAlgorithm::run_simulation_dumb(self)
@@ -85,19 +89,16 @@ class Ga
 
   def create_population_pool
     
-    newborn = Array.new(LOCAL_CHILDREN, Individual.new())
+    newborn = Array.new(LOCAL_CHILDREN, Individual.new(@intervals,@endpoint_x,@endpoint_y))
 
     #create a new pool of the same size population
-    next_generation = Pool.new(@p.population_size)
-
-    father = Individual.new()
-    mother = Individual.new()
+    next_generation = Pool.new(@p.population_size, @intervals, @num_mutations, @num_crossovers, @endpoint_x, @endpoint_y)
 
     #force its sanity to be false
     @p.sanity = false
 
     #puts "pool creation start"
-    (0...(@p.population_size)).each do
+    @p.population_size.times do
     
       father, mother = @p.roulette_wheel_selection(father, mother)
       
@@ -120,7 +121,7 @@ class Ga
 
       #mutate and measure fitness
       (0...LOCAL_CHILDREN).each do |k|
-        newborn[k].mutate if rand <= @mutation_prob          
+        newborn[k].mutate(@num_mutations) if rand <= @mutation_prob          
         
         newborn[k].calc_fitness
       end
@@ -141,7 +142,7 @@ class Ga
     p2.sanitise
 
     #Create a new Pool
-    new_pool = Pool.new(p.population_size)
+    new_pool = Pool.new(p.population_size, p.intervals, @num_mutations, @num_crossovers, @endpoint_x, @endpoint_y)
 
     #work out no. Individuals from p & p2 to keep
     amount_to_keep = (p.population_size.to_f * @keep_percent).floor

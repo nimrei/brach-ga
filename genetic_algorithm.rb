@@ -14,10 +14,10 @@ module GeneticAlgorithm
 
   def self.run_simulation_smart(g)
 
-    original_intervals = Individual.current_intervals 
-
+    original_intervals = g.intervals
+    
     #set the no. intervals in the Individual class so that every Individual created has only 10 'y' values
-    Individual.current_intervals = 10
+    g.p.intervals = 10
 
     # create initial population
     g.p.create_initial_population

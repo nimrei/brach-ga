@@ -2,50 +2,27 @@ require "gnuplot"
 
 class Individual
 
-  #marks the ranges of our points i.e.  
-  # start point:  [0,DEFAULT_Y_COORD] 
-  # end point:    [DEFAULT_X_COORD,0]
-  DEFAULT_HEIGHT =  2.0
-  DEFAULT_X_COORD = 100.0
-  DEFAULT_Y_COORD = DEFAULT_HEIGHT
-
-  #no. intervals between (not incl.) 
-  DEFAULT_NINTERVAL = 50#100#20#0  
-  @@current_intervals = DEFAULT_NINTERVAL
-
   #Fitness function constants
   GRAVITY = -9.8
 
   #Tiny non-zero value to give to undesirable fitnesses
   MIN_FLOAT = 1e-37
 
-  #No. times to mutate each time the mutate function is called on the Individual
-  #(increase/decrease a point in the y array and adjust its neighbours)
-  MUTATIONS = 1
 
-  attr_reader :DEFAULT_NINTERVAL
   attr_accessor :y, :size, :fitness, :interval_x_distance
 
-  def initialize(size=@@current_intervals)
+  def initialize(size, endpoint_x, endpoint_y)
     @size = size.to_i
     @fitness = 0
     @y = Array.new(size, 0.0)
 
-    @endpoint_x = DEFAULT_X_COORD
-    @endpoint_y = DEFAULT_Y_COORD
+    @endpoint_x = endpoint_x
+    @endpoint_y = endpoint_y
 
-    @interval_x_distance = DEFAULT_X_COORD/(@size+1)
+    @interval_x_distance = @endpoint_x/(@size+1)
 
-    @total_y_displacement = DEFAULT_Y_COORD
+    @total_y_displacement = @endpoint_y
 
-  end
-
-  def self.current_intervals
-    @@current_intervals
-  end
-
-  def self.current_intervals=(value)
-    @@current_intervals = value
   end
 
 
@@ -65,14 +42,14 @@ class Individual
 
   def reset_to_slope
 
-    total_x_displacement = (@size+1)*interval_x_distance
+    total_x_displacement = (@size+1)*@interval_x_distance
 
     # using y=mx+c, mark each interval's y co-ordinate for a line 
-    # between [0,DEFAULT_HEIGHT] and [total_x_displacement,0] 
-    c = DEFAULT_HEIGHT
-    m = DEFAULT_HEIGHT/total_x_displacement
+    # between [0,@endpoint_y] and [@total_x_displacement,0] 
+    c = @endpoint_y
+    m = @endpoint_y/total_x_displacement
 
-    @y.collect!.with_index {|x,i| (-1*m) * (interval_x_distance*(i+1)) + c}
+    @y.collect!.with_index {|x,i| (-1*m) * (@interval_x_distance*(i+1)) + c}
 
   end
 
@@ -83,27 +60,24 @@ class Individual
 
   #amplify heights by a random amount [1,2]*out_factor
   def locally_improve(out_factor)
-    factor = (rand + 1.0) * out_factor
-    @y.collect!{|height| height*factor}
-    #@y.collect!{|height| (height*factor) > @endpoint_y ? height/factor : height*factor}
+    @y.collect!{|height| height * ((rand + 1.0) * out_factor)}
   end
 
   #amplify heights by factor 
   def locally_improve_constant(factor)  
     @y.collect!{|height| height*factor}
-    #@y.collect!{|height| (height*factor) > @endpoint_y ? height/factor : height*factor}
   end
 
   # Mutation method
   # randomly add or subtract an amount proportionate to our y array's index
   # we then (to preserve the curve of the expected solution, adjust its 
   # neighbours accordingly) -> makes things converge A LOT faster
-  def mutate
+  def mutate(number_mutations)
     number_intervals = @size - 1
 
     radius = (number_intervals + 1).to_f / 20.0
 
-    MUTATIONS.times do
+    number_mutations.times do
       
       #get random point from 1...size-1
       index = rand(0...number_intervals).to_i
@@ -139,7 +113,7 @@ class Individual
   end
 
   def clone 
-    ind = Individual.new()
+    ind = Individual.new(@size,@endpoint_x,@endpoint_y)
     ind.y = @y.collect{|height| height}  
     ind.fitness = @fitness
     return ind
@@ -155,8 +129,8 @@ class Individual
   #TODO: revisit this code and see if the original version does a better, more readable job
   def create_bigger_individual(new_size)
     
-    current_subinterval_size = DEFAULT_X_COORD/(@size+1)
-    new_sub_interval_size = DEFAULT_X_COORD/(new_size+1)
+    current_subinterval_size = @endpoint_x/(@size+1)
+    new_sub_interval_size = @endpoint_x/(new_size+1)
     current_size = @y.size
 
     #We include the endpoints as it simplifies things
@@ -331,21 +305,21 @@ class Individual
   def get_point_arrays
 
     y_axis = ([@total_y_displacement, @y, 0.0]).flatten
-    x_axis = (0..@size+1).collect{|x| x*(DEFAULT_X_COORD/(@size+1))}
+    x_axis = (0..@size+1).collect{|x| x*(@endpoint_x/(@size+1))}
     
     return x_axis,y_axis
 
   end
 
 
-  def to_s
-    puts "--------------------------"
-    puts "-Individual-"
-    puts "fitness: %f" % [@fitness]
-    puts "size: %d" % [@size]
-    puts "y: #{@y.to_s}"
-    puts "--------------------------"
-  end
+  # def to_s
+  #   puts "--------------------------"
+  #   puts "-Individual-"
+  #   puts "fitness: %f" % [@fitness]
+  #   puts "size: %d" % [@size]
+  #   puts "y: #{@y.to_s}"
+  #   puts "--------------------------"
+  # end
 
 
 

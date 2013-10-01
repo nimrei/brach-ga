@@ -2,19 +2,27 @@ require_relative 'individual'
 
 class Pool
 
-  NUM_CROSSOVERS = 1
+  
 
 
-  attr_accessor :population, :sanity
-  attr_reader :population_size, :relative_fitness
+  attr_accessor :population, :sanity, :intervals
+  attr_reader :population_size, :relative_fitness, :endpoint_x, :endpoint_y
 
-  def initialize(size)
+  def initialize(population_size, intervals, num_mutations, num_crossovers, endpoint_x, endpoint_y)
 
-    @population_size = size
+    @population_size = population_size
+    @intervals = intervals
+
     @sanity = false
 
     @slope_percent = 0.0
     @ordered_random_percent = 0.0
+
+    @num_mutations = num_mutations
+    @num_crossovers = num_crossovers
+
+    @endpoint_x = endpoint_x
+    @endpoint_y = endpoint_y
 
     if(@slope_percent + @ordered_random_percent > 1.0)
       @slope_percent = @slope_percent/(@slope_percent + @ordered_random_percent)
@@ -68,7 +76,7 @@ class Pool
         when 1 then
           if num_slope > 0
             ind = create_slope_individual
-            ind.mutate(num_intervals) if slope_population > 1
+            ind.mutate(num_mutations) if slope_population > 1
             slope_population -= 1
           else
             ind = create_random_individual
@@ -85,10 +93,11 @@ class Pool
   end
 
   def modify_interval_size(new_size)
+    @intervals = new_size
+
     @population_size.times do |i|
       @population[i].create_bigger_individual(new_size)
     end
-    Individual.current_intervals = new_size
   end
 
   # ============================================
@@ -96,13 +105,13 @@ class Pool
   # ============================================
 
   def create_random_individual
-    ind = Individual.new()
+    ind = Individual.new(@intervals,@endpoint_x,@endpoint_y)
     ind.reset_to_random_heights
     return ind  
   end
 
   def create_slope_individual
-     ind = Individual.new() 
+     ind = Individual.new(@intervals,@endpoint_x,@endpoint_y) 
      ind.reset_to_slope
      return ind
   end
@@ -247,7 +256,7 @@ class Pool
         random_index = rand(0...(@population_size-1))
 
         #mutate this individual
-        population[random_index].mutate()
+        population[random_index].mutate(@num_mutations)
 
         #recalculate fitness
         population[random_index].calc_fitness()
