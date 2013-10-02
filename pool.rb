@@ -48,7 +48,7 @@ class Pool
 
 
   # =======================================================
-  # Pool (i.e. batch of Individuals) create/modify methods
+  # Pool create/modify methods
   # =======================================================
 
   def create_initial_population
@@ -160,6 +160,11 @@ class Pool
   # Breeding methods
   # ============================================
 
+
+  # creates an offspring whose y values are the average of its parents
+  # eg. 
+  #   father = [a,a,a,a,a,a,a] mother = [b,b,b,b,b,b,b]
+  #   offspring = [avg(a,b),avg(a,b),avg(a,b),avg(a,b),avg(a,b),avg(a,b),avg(a,b)]
   def breed_mean(father,mother)
 
     fm = [father,mother]
@@ -179,6 +184,12 @@ class Pool
     return offspring
   end
 
+
+  # creates an offspring whose y values are sequences of its parents based off no. crossover points
+  # eg. 
+  #   father = [a,a,a,a,a,a,a] mother = [b,b,b,b,b,b,b]
+  #   offspring = [a,a,a,b,b,b,b] (1 crossover point of 3)
+  #   offspring = [a,a,b,b,b,a,a] (2 crossover points of 2 & 5)
   def breed_splice(father,mother)
     
     fm = [father,mother]
@@ -207,6 +218,13 @@ class Pool
     return offspring
   end
 
+
+  # creates an offspring whose y values are randomly picked between its parents based off no. crossover points
+  # eg. 
+  #   father = [a,a,a,a,a,a,a] mother = [b,b,b,b,b,b,b]
+  #   offspring = [a,a,a,b,a,a,a] (1 crossover point of 3, father selected as random base parent)
+  #   offspring = [b,b,b,a,b,b,b] (1 crossover point of 3, motther selected as random base parent)
+  #   offspring = [a,a,b,a,b,a,a] (2 crossover points of 2 & 5, father selected as random base parent)
   def breed_interleave(father,mother)
     
     fm = [father,mother]
@@ -231,7 +249,7 @@ class Pool
 
 
   def get_crossover_points(fm)
-    crossover_count = NUM_CROSSOVERS < fm[0].size ? NUM_CROSSOVERS : (fm[0].size/2)
+    crossover_count = @num_crossovers < fm[0].size ? @num_crossovers : (fm[0].size/2)
     return (0...fm[0].size).to_a.shuffle.slice(0,crossover_count).sort
   end
 

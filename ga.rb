@@ -1,7 +1,5 @@
 #!/usr/bin/ruby -w
 
-
-require_relative 'genetic_algorithm'
 require_relative 'pool'
 
 
@@ -60,20 +58,85 @@ class Ga
     #initalise random
     srand(Time.new.usec)
 
-    #@p.create_initial_population
-
     #only allow run_simulation_smart for 70 iterations
     if @smart_start && @max_it > 70 && @intervals > 10
-      GeneticAlgorithm::run_simulation_smart(self)
+      run_simulation_smart
     else
-      GeneticAlgorithm::run_simulation_dumb(self)
+      run_simulation_dumb
     end
   end
 
 
+  def report_time_simple(i,best)
+     printf "(%d): %.40f\n" % [i, 1.0/best.fitness]
+  end
 
 
   #private
+
+  def run_simulation_dumb
+    #create initial population
+    @p.create_initial_population
+
+    @simulation_begun = true
+    (0...(@max_it)).each do |i|
+
+      evolve_next_generation
+      @p.mutate_population
+      report_time_simple(i+1,@p.get_best)
+
+    end
+  end
+
+  def run_simulation_smart
+
+    original_intervals = @intervals
+    
+    #set the no. intervals in the Individual class so that every Individual created has only 10 'y' values
+    @p.intervals = 10
+
+    # create initial population
+    @p.create_initial_population
+
+    # with a quarter of our intended iterations always use 10 intervals
+    sub_iteration = @max_it/4 
+    (sub_iteration).times do |i| 
+
+      # run our simulation as normal
+      evolve_next_generation
+      @p.mutate_population
+      report_time_simple(i+1,@p.get_best)
+    
+    end
+
+    # for the rest increase our interval size when needed
+    # i.e. every time we're in a new quadrant of iterations, 
+    # increase our interval size until we're the full size in the 4th
+
+    # so first lets get our generations to increment and the intervals to increase to
+    generations_to_increase_intervals = (1..3).map {|i| (sub_iteration*i)+1}
+    intervals_to_increase_to = (1..2).map {|i| 10+(i*(original_intervals-10)/3)}.push(original_intervals)
+
+    # # for the remainder of our iterations...
+    (sub_iteration).upto(@max_it) do |i|
+
+      if generations_to_increase_intervals.include?(i)
+        
+        index = generations_to_increase_intervals.index(i) 
+
+        # ok let's increase the no. intervals
+        @p.modify_interval_size(intervals_to_increase_to[index])
+
+      end 
+
+      # run our simulation as normal
+      evolve_next_generation
+      @p.mutate_population
+      report_time_simple(i+1,@p.get_best)
+
+    end
+
+  end  
 
 
 
